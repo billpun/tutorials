@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.0.1",
+  "model_details": {
+    "name": "testing",
+    "version": {}
+  },
+  "model_parameters": {
+    "data": {
+      "train": {
+        "graphics": {}
+      },
+      "eval": {
+        "graphics": {}
+      }
+    }
+  },
+  "quantitative_analysis": {
+    "graphics": {}
+  },
+  "considerations": {}
+}

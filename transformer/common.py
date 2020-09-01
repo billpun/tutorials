@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -40,8 +41,8 @@ class DataContainer(Dataset):
     def __getitem__(self, index):
         X = self.X[index]
         y = self.Y[index]
-        return X, y
-		
+        return X, y, index
+
 class Common():
 
     @staticmethod
@@ -81,3 +82,51 @@ class Common():
     @staticmethod
     def device():
         return torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    
+    
+class FocalLoss(nn.Module):
+    
+    def __init__(self, device, gamma=2):
+        super().__init__()
+        self.gamma = gamma
+        self.device = device
+
+    def forward(self, logit, target):
+        loss = self.ce(logit, target)
+        #print(loss)
+        return loss
+    
+    def fl(self, logit, target):
+        B, I = logit.shape
+        y = torch.zeros(logit.shape).to(device)
+        for i in range(y.shape[0]):
+            y[i][target[i]] = 1
+        yhat = F.softmax(logit, dim=1)
+        z = F.log_softmax(logit, dim=1)
+        loss = torch.bmm(
+            z.view(B, 1, I),
+            (y * ((1-yhat) ** self.gamma)).view(B, I, 1)
+        ).reshape(-1)
+        return -loss.mean()
+    
+    def ce(self, logit, target):
+        B, I = logit.shape
+        y = torch.zeros(logit.shape).to(device)
+        for i in range(y.shape[0]):
+            y[i][target[i]] = 1
+        yhat = F.log_softmax(logit, dim=1)
+        loss = torch.bmm(yhat.view(B, 1, I), y.view(B, I, 1)).reshape(-1)
+        return -loss.mean()
+    
+    def lfl(self, logit, target):
+        B, I = logit.shape
+        y = torch.zeros(logit.shape).to(device)
+        for i in range(y.shape[0]):
+            y[i][target[i]] = 1
+        max_val = (-logit).clamp(min=0)
+        loss = logit - logit * y + max_val + \
+               ((-max_val).exp() + (-logit - max_val).exp()).log()
+        invprobs = F.logsigmoid(-logit * (y * 2.0 - 1.0))
+        loss = (invprobs * self.gamma).exp() * loss
+        loss = loss.sum(dim=1)
+        return loss.mean()
